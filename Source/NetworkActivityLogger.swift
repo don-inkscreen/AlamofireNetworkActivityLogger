@@ -67,7 +67,7 @@ public class NetworkActivityLogger {
     
     private var startDates: [URLSessionTask: Date]
     
-    weak var delegate: NetworkActivityLoggerDelegate?
+    public weak var delegate: NetworkActivityLoggerDelegate?
     
     // MARK: - Internal - Initialization
     

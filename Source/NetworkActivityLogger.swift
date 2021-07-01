@@ -48,6 +48,10 @@ public enum NetworkActivityLoggerLevel {
     case fatal
 }
 
+public protocol NetworkActivityLoggerDelegate: AnyObject {
+    func log(level: NetworkActivityLoggerLevel, message: String?)
+}
+
 /// `NetworkActivityLogger` logs requests and responses made by Alamofire.SessionManager, with an adjustable level of detail.
 public class NetworkActivityLogger {
     // MARK: - Properties
@@ -62,6 +66,8 @@ public class NetworkActivityLogger {
     public var filterPredicate: NSPredicate?
     
     private var startDates: [URLSessionTask: Date]
+    
+    weak var delegate: NetworkActivityLoggerDelegate?
     
     // MARK: - Internal - Initialization
     
@@ -124,19 +130,19 @@ public class NetworkActivityLogger {
         case .debug:
             logDivider()
             
-            print("\(httpMethod) '\(requestURL.absoluteString)':")
+            delegate?.log(level: .info, message: "\(httpMethod) '\(requestURL.absoluteString)':")
             
             if let httpHeadersFields = request.allHTTPHeaderFields {
                 logHeaders(headers: httpHeadersFields)
             }
             
             if let httpBody = request.httpBody, let httpBodyString = String(data: httpBody, encoding: .utf8) {
-                print(httpBodyString)
+                delegate?.log(level: .debug, message: httpBodyString)
             }
         case .info:
             logDivider()
             
-            print("\(httpMethod) '\(requestURL.absoluteString)'")
+            delegate?.log(level: .info, message: "\(httpMethod) '\(requestURL.absoluteString)'")
         default:
             break
         }
@@ -169,8 +175,8 @@ public class NetworkActivityLogger {
             case .debug, .info, .warn, .error:
                 logDivider()
                 
-                print("[Error] \(httpMethod) '\(requestURL.absoluteString)' [\(String(format: "%.04f", elapsedTime)) s]:")
-                print(error)
+                delegate?.log(level: .error, message: "[Error] \(httpMethod) '\(requestURL.absoluteString)' [\(String(format: "%.04f", elapsedTime)) s]:")
+                delegate?.log(level: .error, message: "\(error)")
             default:
                 break
             }
@@ -183,7 +189,7 @@ public class NetworkActivityLogger {
             case .debug:
                 logDivider()
                 
-                print("\(String(response.statusCode)) '\(requestURL.absoluteString)' [\(String(format: "%.04f", elapsedTime)) s]:")
+                delegate?.log(level: .info, message: "\(String(response.statusCode)) '\(requestURL.absoluteString)' [\(String(format: "%.04f", elapsedTime)) s]:")
                 
                 logHeaders(headers: response.allHeaderFields)
                 
@@ -194,17 +200,17 @@ public class NetworkActivityLogger {
                     let prettyData = try JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
                     
                     if let prettyString = String(data: prettyData, encoding: .utf8) {
-                        print(prettyString)
+                        delegate?.log(level: .debug, message: prettyString)
                     }
                 } catch {
                     if let string = NSString(data: data, encoding: String.Encoding.utf8.rawValue) {
-                        print(string)
+                        delegate?.log(level: .debug, message: "\(string)")
                     }
                 }
             case .info:
                 logDivider()
                 
-                print("\(String(response.statusCode)) '\(requestURL.absoluteString)' [\(String(format: "%.04f", elapsedTime)) s]")
+                delegate?.log(level: .info, message: "\(String(response.statusCode)) '\(requestURL.absoluteString)' [\(String(format: "%.04f", elapsedTime)) s]")
             default:
                 break
             }
@@ -214,14 +220,14 @@ public class NetworkActivityLogger {
 
 private extension NetworkActivityLogger {
     func logDivider() {
-        print("---------------------")
+        delegate?.log(level: .debug, message: "---------------------")
     }
     
     func logHeaders(headers: [AnyHashable : Any]) {
-        print("Headers: [")
+        delegate?.log(level: .debug, message: "Headers: [")
         for (key, value) in headers {
-            print("  \(key) : \(value)")
+            delegate?.log(level: .debug, message: "  \(key) : \(value)")
         }
-        print("]")
+        delegate?.log(level: .debug, message: "]")
     }
 }
